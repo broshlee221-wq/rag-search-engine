@@ -1,5 +1,48 @@
-from lib.search_utils import load_movies
+from lib.search_utils import load_movies, load_stopwords, CACHE_PATH
 import string
+from nltk.stem import PorterStemmer as stemmer
+from collections import defaultdict
+import os
+import pickle
+
+class InvertedIndex:
+    def __init__(self):
+        self.index = defaultdict(set)
+        self.docmap = {}
+        self.index_path = CACHE_PATH/'index.pkl'
+        self.docmap_path = CACHE_PATH/'docmap.pkl'
+
+    def __add_document(self, doc_id, text):
+        tokens = tokenize_text(text)
+        for token in set(tokens):
+            self.index[token].add(doc_id)
+
+    def get_documnets(self, term):
+        return sorted(list(self.index[term]))
+
+    def build(self):
+        movies = load_movies()
+        for movie in movies:
+            doc_id = movie['id']
+            title = f"{movie['title']} {movie['description']}"
+            self.__add_document(doc_id, title)
+            self.docmap[doc_id] = movie
+
+    def save(self):
+        os.makedirs(CACHE_PATH, exist_ok=True)
+        with open(self.index_path, 'wb') as f:
+            pickle.dump(self.index, f)
+        with open(self.docmap_path, 'wb') as f:
+            pickle.dump(self.docmap, f)
+
+def build_command():
+    idx = InvertedIndex()
+    idx.build()
+    idx.save()
+    docs = idx.get_documnets("merida")
+    print(f"First document for token 'merida' = {docs[0]}")
+
+
 
 def clean_text(text) :
     text = text.lower()
@@ -8,8 +51,17 @@ def clean_text(text) :
 
 def tokenize_text(text):
     text = clean_text(text)
-    tokens = [tok for tok in text.split() if tok]
-    return tokens
+    stopwords = load_stopwords()
+    res = []
+    def _filter(tok):
+        if tok and tok not in stopwords:
+            return True
+        return False
+    for tok in text.split():
+        if _filter(tok):
+            tok = stemmer().stem(tok)
+            res.append(tok)
+    return res
 
 def has_matching_token(query_tokens, movie_tokens) :
     for query_tok in query_tokens :
