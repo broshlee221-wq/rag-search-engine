@@ -3,8 +3,15 @@
 import argparse
 from lib.keyword_search import (
     search_command,
-    build_command)
-
+    build_command,
+    tf_command,
+    idf_command,
+    tfidf_command,
+    bm25_idf_command,
+    bm25_tf_command,
+    bm25_search,
+)
+from lib.search_utils import (BM25_K1, BM25_B)
 
 
 def main() -> None:
@@ -13,8 +20,31 @@ def main() -> None:
 
     search_parser = subparsers.add_parser("search", help="Search movies using BM25")
     search_parser.add_argument("query", type=str, help="Search query")
+
     search_parser = subparsers.add_parser("build", help="Build index")
 
+    search_parser = subparsers.add_parser("tf", help="Get term frequency")
+    search_parser.add_argument("doc_id", type=int, help="Document ID")
+    search_parser.add_argument("term", type=str, help="Term")
+
+    search_parser = subparsers.add_parser("idf", help="Get inverse document frequency")
+    search_parser.add_argument("term", type=str, help="Term")
+
+    search_parser = subparsers.add_parser("tfidf", help="Get TF-IDF")
+    search_parser.add_argument("doc_id", type=int, help="Document ID")
+    search_parser.add_argument("term", type=str, help="Term")
+
+    bm25_idf_parser = subparsers.add_parser("bm25idf", help="Get BM25 IDF score for a given term")
+    bm25_idf_parser.add_argument("term", type=str, help="Term to get BM25 IDF score for")
+
+    bm25_tf_parser = subparsers.add_parser("bm25tf", help="Get BM25 TF score for a given document ID and term")
+    bm25_tf_parser.add_argument("doc_id", type=int, help="Document ID")
+    bm25_tf_parser.add_argument("term", type=str, help="Term to get BM25 TF score for")
+    bm25_tf_parser.add_argument("k1", type=float, nargs='?', default=BM25_K1, help="Tunable BM25 K1 parameter")
+    bm25_tf_parser.add_argument("b", type=float, nargs='?', default=BM25_B, help="Tunable BM25 B parameter")
+
+    bm25search_parser = subparsers.add_parser("bm25search", help="Search movies using full BM25 scoring")
+    bm25search_parser.add_argument("query", type=str, help="Search query")
 
     args = parser.parse_args()
 
@@ -26,6 +56,23 @@ def main() -> None:
                  print(f"{i} {result['title']}")
         case "build":
             build_command()
+        case "tf":
+            tf_command(args.doc_id, args.term)
+        case "idf":
+            idf_command(args.term)
+        case "tfidf":
+            tfidf_command(args.doc_id, args.term)
+        case "bm25idf":
+            bm25_idf_command(args.term)
+        case "bm25tf":
+            bm25tf = bm25_tf_command(args.doc_id, args.term, args.k1, args.b)
+            print(f"BM25 TF score of '{args.term}' in document '{args.doc_id}': {bm25tf:.2f}")
+        case "bm25search":
+            bm25_results = bm25_search(args.query)
+            for idx, res in enumerate(bm25_results):
+                print(f"{idx}. {res['doc_id']} {res['title']} - Score: {res['score']:.2f}")
+            print(f"searching for : {args.query}")
+
         case _:
             parser.print_help()
 

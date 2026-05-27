@@ -7,7 +7,8 @@ MOVIES_PATH = DATA_PATH /'movies.json'
 STOPWORD_PATH = DATA_PATH /'stopwords.txt'
 
 CACHE_PATH = PROJECT_ROOT/'cache'
-
+BM25_K1 = 1.5
+BM25_B = 0.75
 
 def load_movies() -> list[dict]:
     try:
